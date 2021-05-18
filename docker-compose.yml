@@ -1,0 +1,30 @@
+# Replace `<username>` and `<password>` with the username and password
+# you want to use for your admin user credentials.
+---
+version: "3"
+services:
+  sensu-backend:
+    ports:
+      - 3000:3000
+      - 8080:8080
+      - 8081:8081
+    volumes:
+      - "sensu-backend-data:/var/lib/sensu/sensu-backend/etcd"
+    command: "sensu-backend start --state-dir /var/lib/sensu/sensu-backend --log-level debug"
+    environment:
+      - SENSU_BACKEND_CLUSTER_ADMIN_USERNAME=lightstep
+      - SENSU_BACKEND_CLUSTER_ADMIN_PASSWORD=lightstep
+    image: sensu/sensu:latest
+  sensu-agent:
+    image: sensu/sensu:latest
+    ports:
+      - 3031:3031
+    volumes:
+      - "sensu-agent-data:/var/lib/sensu"
+    command: "sensu-agent start --backend-url ws://sensu-backend:8081 --log-level debug --subscriptions system --api-host 0.0.0.0 --cache-dir /var/lib/sensu"
+
+volumes:
+  sensu-backend-data:
+    driver: local
+  sensu-agent-data:
+    driver: local
