@@ -66,6 +66,17 @@
             "value":"bar"
           }
         ]
+      },
+      {
+        "name":"question",
+        "value":24,
+        "timestamp":1621281348172802000,
+        "tags":[
+          {
+            "name":"server.hostname",
+            "value":"ec2-10-10-10-10"
+          }
+        ]
       }
     ]
   },

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/global"
@@ -9,6 +10,8 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"net/http"
 
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
@@ -35,6 +38,8 @@ var (
 			Keyspace: "sensu.io/plugins/otel-sensu-handler-plugin/config",
 		},
 	}
+	port = ":55788"
+	meter = global.Meter("sensu-otel")
 	options []*sensu.PluginConfigOption
 )
 
@@ -96,6 +101,15 @@ func main() {
 		}
 	}()
 
+	log.Printf("starting http server on port %v...", port)
+	http.HandleFunc("/", postEvent)
+	go func() {
+		err = http.ListenAndServe(port, nil)
+		if err != nil {
+			log.Fatalf("could not listed on port: %v", err.Error())
+		}
+	}()
+
 	log.Printf("starting sensu handler...")
 	handler := sensu.NewGoHandler(&plugin.PluginConfig, options, checkArgs, executeHandler)
 	handler.Execute()
@@ -108,9 +122,7 @@ func checkArgs(_ *types.Event) error {
 	return nil
 }
 
-// based on: https://github.com/portertech/sensu-prometheus-pushgateway-handler/blob/main/main.go
-func executeHandler(event *types.Event) error {
-	meter := global.Meter("sensu-otel")
+func eventToOtel(event *types.Event) error {
 	for _, m := range event.Metrics.Points {
 		var labels []attribute.KeyValue
 		for _, t := range m.Tags {
@@ -122,6 +134,30 @@ func executeHandler(event *types.Event) error {
 		}
 		log.Printf("recording metric: %v=%v\n", m.Name, m.Value)
 		recorder.Record(context.Background(), m.Value, labels...)
+	}
+	return nil
+}
+
+// curl --data '@test-event.json' http://localhost:55788
+func postEvent(w http.ResponseWriter, req *http.Request) {
+	var e types.Event
+	err := json.NewDecoder(req.Body).Decode(&e)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("event parse error: %v", err.Error()), http.StatusBadRequest)
+		return
+	}
+	err = eventToOtel(&e)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("could not convert event to otel: %v", err.Error()), http.StatusBadRequest)
+	}
+	fmt.Fprintf(w, "ok: %v\n", e.Metrics)
+}
+
+// based on: https://github.com/portertech/sensu-prometheus-pushgateway-handler/blob/main/main.go
+func executeHandler(event *types.Event) error {
+	err := eventToOtel(event)
+	if err != nil {
+		return err
 	}
 	// HACK: Wait for metrics to flush
 	time.Sleep(10 * time.Second)
