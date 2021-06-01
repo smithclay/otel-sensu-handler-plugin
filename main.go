@@ -101,18 +101,18 @@ func main() {
 		}
 	}()
 
-	log.Printf("starting http server on port %v...", port)
-	http.HandleFunc("/", postEvent)
-	go func() {
+	if os.Getenv("ENABLE_SENSU_HANDLER") == "1" {
+		log.Printf("starting sensu handler...")
+		handler := sensu.NewGoHandler(&plugin.PluginConfig, options, checkArgs, executeHandler)
+		handler.Execute()
+	} else {
+		log.Printf("starting http server on port %v...", port)
+		http.HandleFunc("/", postEvent)
 		err = http.ListenAndServe(port, nil)
 		if err != nil {
 			log.Fatalf("could not listed on port: %v", err.Error())
 		}
-	}()
-
-	log.Printf("starting sensu handler...")
-	handler := sensu.NewGoHandler(&plugin.PluginConfig, options, checkArgs, executeHandler)
-	handler.Execute()
+	}
 }
 
 func checkArgs(_ *types.Event) error {

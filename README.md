@@ -6,18 +6,20 @@
 # otel-sensu-handler-plugin
 
 ## Overview
+
 Sensu handler plugin that emits OpenTelemetry metrics. Experimental/work-in-progress.
 
-## Functionality
+## Usage Examples
 
-After successfully creating a project from this template, update the `Config` struct with any
-configuration options for the plugin, map those values as plugin options in the variable `options`,
-and customize the `checkArgs` and `executeHandler` functions in [main.go][7].
+```
+  # run as as an HTTP server that accepts JSON (default)
+  $ export LS_ACCESS_TOKEN=<your_token>
+  $ ./otel-sensu-handler-plugin
+  $ curl --data '@test-event.json' localhost:55788
 
-When writing or updating a plugin's README from this template, review the Sensu Community
-[plugin README style guide][3] for content suggestions and guidance. Remove everything
-prior to `# otel-sensu-handler-plugin` from the generated README file, and add additional context about the
-plugin per the style guide.
+  # run as a sensu backend handler plugin
+  $ LS_ACCESS_TOKEN=<your_token> ENABLE_SENSU_HANDLER=1 ./otel-sensu-handler-plugin
+```
 
 ## Releases with Github Actions
 

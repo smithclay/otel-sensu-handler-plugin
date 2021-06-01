@@ -6,6 +6,8 @@ jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
+    env:
+      ENABLE_SENSU_HANDLER: "1"
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
